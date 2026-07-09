@@ -1,0 +1,454 @@
+// ============================================================================
+// Kraken-stílusú Spot & Margin kereskedési szimulátor – Prisma séma
+// Kizárólag oktatási/szimulációs célra. Nincs valódi pénzügyi tranzakció.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ----------------------------------------------------------------------------
+// Enumok
+// ----------------------------------------------------------------------------
+
+enum MarketType {
+  SPOT
+  MARGIN
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum PositionSide {
+  LONG
+  SHORT
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+  STOP_LOSS
+  STOP_LOSS_LIMIT
+  TAKE_PROFIT
+  TAKE_PROFIT_LIMIT
+  TRAILING_STOP
+  TRAILING_STOP_LIMIT
+  ICEBERG
+  TWAP
+  OCO
+  SETTLE_POSITION
+  POST_ONLY_LIMIT
+  REDUCE_ONLY
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  EXPIRED
+  TRIGGERED // stop/trailing megbízás aktiválódott, de a keletkező market/limit order még nem futott le
+  REJECTED
+}
+
+enum TrailingOffsetType {
+  PERCENT
+  FIXED
+}
+
+enum TriggerType {
+  LAST_PRICE
+  INDEX_PRICE
+  MARK_PRICE
+}
+
+enum TriggerDirection {
+  ABOVE
+  BELOW
+}
+
+enum TimeInForce {
+  GTC
+  IOC
+  FOK
+  GTD
+}
+
+enum SelfTradePrevention {
+  CANCEL_OLDEST
+  CANCEL_NEWEST
+  CANCEL_BOTH
+}
+
+enum ExecutionType {
+  Market
+  limit
+  Conditional
+  Algorithmic
+  Settlement
+  Restriction
+}
+
+enum PositionStatus {
+  OPEN
+  CLOSED
+  LIQUIDATED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRADE_FEE
+  FUNDING_FEE
+  REALIZED_PNL
+  RESET_ADJUSTMENT
+}
+
+// ----------------------------------------------------------------------------
+// Felhasználó és pénztárca
+// ----------------------------------------------------------------------------
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  emailVerified  Boolean  @default(false)
+  image          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  wallet           Wallet?
+  orders           Order[]
+  positions        Position[]
+  trades           Trade[]
+  transactions     Transaction[]
+  settings         Settings?
+  tutorialProgress TutorialProgress[]
+  journalEntries   JournalEntry[]
+
+  // Better Auth relations
+  sessions Session[]
+  accounts Account[]
+}
+
+// Better Auth Account model (stores credential passwords and OAuth tokens)
+model Account {
+  id                    String   @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String? // hashed password for credential accounts
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Better Auth Session model
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Better Auth Verification model (email verification, password reset tokens)
+model Verification {
+  id          String   @id @default(cuid())
+  identifier  String
+  value       String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([identifier, value])
+}
+
+// Virtuális pénztárca – egyetlen "cash" egyenleg (pl. USD) a szimulációhoz.
+model Wallet {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cashBalance     Decimal @db.Decimal(24, 8) // szabad készpénz
+  reservedMargin  Decimal @default(0) @db.Decimal(24, 8) // margin pozíciókhoz lefoglalt fedezet
+  startingBalance Decimal @db.Decimal(24, 8) // reset alapérték (pl. 10 000 USD)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  holdings AssetHolding[]
+}
+
+// Spot kriptoeszköz-állomány (pl. 0.5 BTC)
+model AssetHolding {
+  id       String @id @default(cuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  assetSymbol String // pl. "BTC"
+  quantity    Decimal @db.Decimal(24, 8)
+
+  @@unique([walletId, assetSymbol])
+}
+
+// ----------------------------------------------------------------------------
+// Piaci eszközök / párok
+// ----------------------------------------------------------------------------
+
+model Asset {
+  id     String @id @default(cuid())
+  symbol String @unique // pl. "BTC/USD"
+  base   String // pl. "BTC"
+  quote  String // pl. "USD"
+  name   String // pl. "Bitcoin"
+
+  isActive    Boolean @default(true)
+  maxLeverage Int     @default(5)
+  makerFeeBps Int     @default(16) // basis pontban, pl. 16 = 0.16%
+  takerFeeBps Int     @default(26)
+
+  candles   Candle[]
+  orders    Order[]
+  positions Position[]
+  trades    Trade[]
+
+  createdAt DateTime @default(now())
+}
+
+// OHLCV gyertyák – a szimulált (vagy később valós) árfolyam-szolgáltató tölti fel.
+model Candle {
+  id      String @id @default(cuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  interval  String // "1m" | "5m" | "15m" | "1h" | "4h" | "1D"
+  timestamp DateTime
+
+  open   Decimal @db.Decimal(24, 8)
+  high   Decimal @db.Decimal(24, 8)
+  low    Decimal @db.Decimal(24, 8)
+  close  Decimal @db.Decimal(24, 8)
+  volume Decimal @db.Decimal(24, 8)
+
+  @@unique([assetId, interval, timestamp])
+  @@index([assetId, interval, timestamp])
+}
+
+// ----------------------------------------------------------------------------
+// Megbízások (Order) – közös alapmodell minden order-típushoz
+// ----------------------------------------------------------------------------
+
+model Order {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  marketType MarketType
+  side       OrderSide
+  type       OrderType
+  status     OrderStatus @default(OPEN)
+
+  // Margin-specifikus mezők (SPOT esetén null)
+  positionSide PositionSide?
+  leverage     Int?
+
+  // Mennyiség
+  quantity       Decimal @db.Decimal(24, 8)
+  filledQuantity Decimal @default(0) @db.Decimal(24, 8)
+
+  // Ár mezők (típusonként eltérően relevánsak)
+  limitPrice   Decimal? @db.Decimal(24, 8)
+  triggerPrice Decimal? @db.Decimal(24, 8) // stop/take-profit aktiválási ár
+
+  // Trailing mezők
+  trailingOffsetType  TrailingOffsetType?
+  trailingOffsetValue Decimal?            @db.Decimal(24, 8)
+  trailingLimitOffset Decimal?            @db.Decimal(24, 8) // trailing stop limit esetén
+  trailingHighWater   Decimal?            @db.Decimal(24, 8) // a legkedvezőbb ár, amihez az offset viszonyul
+
+  averageFillPrice Decimal? @db.Decimal(24, 8)
+  feePaid          Decimal  @default(0) @db.Decimal(24, 8)
+
+  // Ha egy stop/trailing order aktiválódva market/limit order-ré alakul,
+  // ide kerül a belőle keletkezett gyermek order-re mutató hivatkozás.
+  triggeredOrderId String? @unique
+  triggeredOrder   Order?  @relation("OrderTrigger", fields: [triggeredOrderId], references: [id])
+  parentOrder      Order?  @relation("OrderTrigger")
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  expiresAt   DateTime?
+  filledAt    DateTime?
+  cancelledAt DateTime?
+
+  trades Trade[]
+
+  @@index([userId, status])
+  @@index([assetId, status, type])
+}
+
+// ----------------------------------------------------------------------------
+// Pozíciók (kizárólag Margin kereskedéshez; Spot vétel = AssetHolding)
+// ----------------------------------------------------------------------------
+
+model Position {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  side     PositionSide
+  leverage Int
+
+  size             Decimal @db.Decimal(24, 8) // pozíció mérete a base eszközben
+  entryPrice       Decimal @db.Decimal(24, 8)
+  markPrice        Decimal @db.Decimal(24, 8) // legutóbb frissített aktuális ár
+  liquidationPrice Decimal @db.Decimal(24, 8)
+
+  usedMargin    Decimal @db.Decimal(24, 8) // required margin a pozíció nyitásakor
+  realizedPnl   Decimal @default(0) @db.Decimal(24, 8)
+  unrealizedPnl Decimal @default(0) @db.Decimal(24, 8)
+  fundingPaid   Decimal @default(0) @db.Decimal(24, 8)
+
+  status PositionStatus @default(OPEN)
+
+  openedAt  DateTime  @default(now())
+  closedAt  DateTime?
+  updatedAt DateTime  @updatedAt
+
+  trades Trade[]
+
+  @@index([userId, status])
+}
+
+// ----------------------------------------------------------------------------
+// Kötések (Trade) – minden tényleges execution naplózása
+// ----------------------------------------------------------------------------
+
+model Trade {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  positionId String?
+  position   Position? @relation(fields: [positionId], references: [id])
+
+  marketType MarketType
+  side       OrderSide
+  orderType  OrderType
+
+  price    Decimal @db.Decimal(24, 8)
+  quantity Decimal @db.Decimal(24, 8)
+  fee      Decimal @default(0) @db.Decimal(24, 8)
+  pnl      Decimal @default(0) @db.Decimal(24, 8) // csak záró/pozíció-csökkentő kötéseknél releváns
+
+  executedAt DateTime @default(now())
+
+  @@index([userId, executedAt])
+}
+
+// ----------------------------------------------------------------------------
+// Tranzakciónapló (pénztárca-mozgások, díjak, funding, reset)
+// ----------------------------------------------------------------------------
+
+model Transaction {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type   TransactionType
+  amount Decimal         @db.Decimal(24, 8)
+  note   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ----------------------------------------------------------------------------
+// Beállítások
+// ----------------------------------------------------------------------------
+
+model Settings {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  darkMode        Boolean @default(true)
+  language        String  @default("hu")
+  displayCurrency String  @default("USD")
+  startingBalance Decimal @default(10000) @db.Decimal(24, 8)
+  priceFeedMode      String  @default("simulated") // "simulated" | "live"
+  orderConfirmation  Boolean @default(false) // Show confirmation dialog before submitting orders
+
+  updatedAt DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------------------
+// Oktatási mód – interaktív tutorial haladás
+// ----------------------------------------------------------------------------
+
+model TutorialProgress {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  taskKey     String // pl. "market-buy-btc", "limit-buy", "stop-loss", "open-long", "open-short"
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+
+  @@unique([userId, taskKey])
+}
+
+// ----------------------------------------------------------------------------
+// Trading Journal – notes, tags, emotional state, screenshots for trades
+// ----------------------------------------------------------------------------
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tradeId       String?  // optional link to a Trade for reference
+  assetSymbol   String?  // e.g. "BTC/USD" — denormalized for quick filtering
+  notes         String   @db.Text
+  tags          String[] // e.g. ["scalp", "swing", "breakout"]
+  emotionalState String? // e.g. "calm", "excited", "stressed", "confident", "cautious"
+  screenshot    String?  // base64 data URL or external image URL
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}

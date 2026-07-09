@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+
+# Next.js / build output
+.next
+out
+build
+coverage
+
+# Generated Prisma client (regenerated at build time)
+app/generated/prisma
+
+# Environment files (never bake secrets into the image)
+.env
+.env.*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# Editor / OS
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Misc
+npm-debug.log*
+README.md
+PROJECT-PLAN.md
+CLAUDE.md
+AGENTS.md

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":automergeMinor"
+  ],
+  "labels": ["dependencies", "needs-triage"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "matchBranch": "main"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": true
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["next", "react", "react-dom"],
+      "labels": ["dependencies", "framework", "needs-triage"],
+      "automerge": false
+    }
+  ],
+  "prConcurrentLimit": 6,
+  "schedule": ["before 6am on monday"]
+}

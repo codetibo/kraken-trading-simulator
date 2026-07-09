@@ -1,0 +1,73 @@
+# Docker Compose for local development
+# Zero-config setup: `docker compose up` starts PostgreSQL + the Next.js app,
+# runs migrations, seeds the database, and starts the dev server on :3000.
+#
+# Usage:
+#   docker compose up            # build & start (foreground logs)
+#   docker compose up -d         # start in background
+#   docker compose down          # stop & remove containers (keeps the DB volume)
+#   docker compose down -v       # also delete the database volume
+#
+# Override any value by creating a `.env` file next to this compose file, e.g.:
+#   POSTGRES_PASSWORD=mySecret
+#   POSTGRES_DB=kraken_trading_simulator
+
+services:
+  db:
+    image: postgres:16
+    container_name: kraken-trading-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-kraken_trading_simulator}
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kraken_trading_simulator}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kraken-trading-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Inside the compose network the DB is reachable via the service name `db`.
+      # This overrides any DATABASE_URL coming from a bind-mounted .env file.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-kraken_trading_simulator}?schema=public
+      NODE_ENV: development
+      # Optional demo-user seed overrides
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-demo@kraken-simulator.local}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-demo123456}
+      SEED_USER_NAME: ${SEED_USER_NAME:-Demo Trader}
+      SEED_USER_BALANCE: ${SEED_USER_BALANCE:-10000}
+    ports:
+      - '3000:3000'
+    # Bind-mount the source for hot reload; keep node_modules in a named volume
+    # so the Linux container does not use the host's (Windows/macOS) native modules.
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: >
+      sh -c "npm install &&
+             npx prisma generate &&
+             npx prisma migrate deploy &&
+             npx prisma db seed &&
+             npm run dev"
+
+volumes:
+  pgdata:

@@ -1,0 +1,12 @@
+# Issue template configuration
+# See https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: 💬 Questions & community support
+    url: https://github.com/codetibo/kraken-trading-simulator/discussions/categories/q-a
+    about: Ask usage questions and get help in GitHub Discussions instead of opening an issue.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/codetibo/kraken-trading-simulator/security/advisories/new
+    about: Please report security issues privately via the Security Advisory form, not a public issue.
