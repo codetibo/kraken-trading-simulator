@@ -38,11 +38,15 @@ describe('EmptyState', () => {
   it('renders without an icon when not provided', () => {
     const { container } = render(<EmptyState message='Just text' />);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const svg = container.querySelector('svg');
     // There should be no lucide icon for the empty state
     // There IS an icon inside the Trade link, so check carefully
     // The component renders: Icon && <Icon ... />, so if no Icon, no SVG from Icon
-    const tradeSvg = screen.getByText('Trade').closest('a')?.querySelector('svg');
+    const tradeSvg = screen
+      .getByText('Trade')
+      .closest('a')
+      ?.querySelector('svg');
     expect(tradeSvg).toBeInTheDocument();
   });
 

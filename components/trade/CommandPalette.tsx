@@ -7,9 +7,17 @@ import { Search } from 'lucide-react';
 const ALL_SYMBOLS = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'XRP/USD', 'DOGE/USD'];
 
 const PAGE_ACTIONS = [
-  { label: 'Dashboard', href: '/dashboard', keywords: 'home overview portfolio' },
+  {
+    label: 'Dashboard',
+    href: '/dashboard',
+    keywords: 'home overview portfolio',
+  },
   { label: 'Trade', href: '/trade', keywords: 'order buy sell exchange' },
-  { label: 'Portfolio', href: '/portfolio', keywords: 'holdings positions equity' },
+  {
+    label: 'Portfolio',
+    href: '/portfolio',
+    keywords: 'holdings positions equity',
+  },
   { label: 'Orders', href: '/orders', keywords: 'open history cancelled' },
   { label: 'Positions', href: '/positions', keywords: 'margin long short' },
   { label: 'History', href: '/history', keywords: 'trades transactions log' },
@@ -24,7 +32,11 @@ interface CommandPaletteProps {
   onSelectAsset?: (symbol: string) => void;
 }
 
-export function CommandPalette({ open, onClose, onSelectAsset }: CommandPaletteProps) {
+export function CommandPalette({
+  open,
+  onClose,
+  onSelectAsset,
+}: CommandPaletteProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -35,7 +47,7 @@ export function CommandPalette({ open, onClose, onSelectAsset }: CommandPaletteP
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery('');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setSelectedIndex(0);
       // Focus input after mount
       requestAnimationFrame(() => inputRef.current?.focus());
@@ -69,8 +81,18 @@ export function CommandPalette({ open, onClose, onSelectAsset }: CommandPaletteP
 
   const allResults = useMemo(
     () => [
-      ...filteredPages.map(p => ({ type: 'page' as const, label: p.label, href: p.href, symbol: '' })),
-      ...filteredAssets.map(s => ({ type: 'asset' as const, label: s, href: `/trade?symbol=${s}`, symbol: s })),
+      ...filteredPages.map(p => ({
+        type: 'page' as const,
+        label: p.label,
+        href: p.href,
+        symbol: '',
+      })),
+      ...filteredAssets.map(s => ({
+        type: 'asset' as const,
+        label: s,
+        href: `/trade?symbol=${s}`,
+        symbol: s,
+      })),
     ],
     [filteredPages, filteredAssets],
   );
@@ -153,7 +175,9 @@ export function CommandPalette({ open, onClose, onSelectAsset }: CommandPaletteP
                 Pages
               </p>
               {filteredPages.map(p => {
-                const idx = allResults.findIndex(r => r.type === 'page' && r.label === p.label);
+                const idx = allResults.findIndex(
+                  r => r.type === 'page' && r.label === p.label,
+                );
                 return (
                   <button
                     key={p.href}
@@ -165,7 +189,9 @@ export function CommandPalette({ open, onClose, onSelectAsset }: CommandPaletteP
                     }`}
                   >
                     <span className='flex-1'>{p.label}</span>
-                    <span className='text-[10px] text-muted-foreground'>Page</span>
+                    <span className='text-[10px] text-muted-foreground'>
+                      Page
+                    </span>
                   </button>
                 );
               })}
@@ -178,7 +204,9 @@ export function CommandPalette({ open, onClose, onSelectAsset }: CommandPaletteP
                 Assets
               </p>
               {filteredAssets.map(s => {
-                const idx = allResults.findIndex(r => r.type === 'asset' && r.label === s);
+                const idx = allResults.findIndex(
+                  r => r.type === 'asset' && r.label === s,
+                );
                 return (
                   <button
                     key={s}
@@ -190,7 +218,9 @@ export function CommandPalette({ open, onClose, onSelectAsset }: CommandPaletteP
                     }`}
                   >
                     <span className='font-mono text-xs'>{s}</span>
-                    <span className='ml-auto text-[10px] text-muted-foreground'>Trade</span>
+                    <span className='ml-auto text-[10px] text-muted-foreground'>
+                      Trade
+                    </span>
                   </button>
                 );
               })}

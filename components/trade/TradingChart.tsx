@@ -19,7 +19,12 @@ import {
 } from 'lightweight-charts';
 import { useTheme } from 'next-themes';
 import { useSelectedAsset } from './AssetProvider';
-import { loadTradeSettings, saveTradeSettings, CANDLE_LIMITS, getDefaultCandleLimit } from '@/lib/trade-settings';
+import {
+  loadTradeSettings,
+  saveTradeSettings,
+  CANDLE_LIMITS,
+  getDefaultCandleLimit,
+} from '@/lib/trade-settings';
 import { computeIndicators, type IndicatorId } from '@/lib/indicators';
 import {
   ChartType,
@@ -33,13 +38,18 @@ import {
 } from '@/lib/chart-theme';
 import { ChartToolbar } from './trading-chart/ChartToolbar';
 
-type MainSeriesApi = ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | ISeriesApi<'Area'>;
+type MainSeriesApi =
+  | ISeriesApi<'Candlestick'>
+  | ISeriesApi<'Line'>
+  | ISeriesApi<'Area'>;
 
 interface TradingChartProps {
   simplified?: boolean;
 }
 
-export const TradingChart = memo(function TradingChart({ simplified = false }: TradingChartProps) {
+export const TradingChart = memo(function TradingChart({
+  simplified = false,
+}: TradingChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const mainSeriesRef = useRef<MainSeriesApi | null>(null);
@@ -55,7 +65,9 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
   const { theme } = useTheme();
   const intervals = simplified ? SIMPLIFIED_INTERVALS : FULL_INTERVALS;
   const saved = loadTradeSettings(selectedAsset);
-  const [interval, setInterval] = useState<Interval>(saved.chartInterval as Interval || '1h');
+  const [interval, setInterval] = useState<Interval>(
+    (saved.chartInterval as Interval) || '1h',
+  );
   const [chartType, setChartType] = useState<ChartType>('candlestick');
   const [compareAsset, setCompareAsset] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -68,28 +80,31 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
   // Persist chart interval on change (not on asset switch — avoids race condition)
   useEffect(() => {
     saveTradeSettings(selectedAsset, { chartInterval: interval });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interval]);
 
   // Persist candle limit on change
   useEffect(() => {
     saveTradeSettings(selectedAsset, { candleLimit });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candleLimit]);
 
   // Reload persisted interval when asset changes
   useEffect(() => {
     const saved = loadTradeSettings(selectedAsset);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setInterval((saved.chartInterval as Interval) || '1h');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setCandleLimit(
-      CANDLE_LIMITS.includes(saved.candleLimit as typeof CANDLE_LIMITS[number])
+      CANDLE_LIMITS.includes(
+        saved.candleLimit as (typeof CANDLE_LIMITS)[number],
+      )
         ? saved.candleLimit
         : 200,
     );
   }, [selectedAsset]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -108,11 +123,11 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
     const hasMacd = activeIndicators.includes('macd');
     if (hasRsi && hasMacd) {
       return {
-        mainBottom: 0.55,            // main chart shrinks to top 45%
+        mainBottom: 0.55, // main chart shrinks to top 45%
         volumeTop: 0.85,
         hideVolume: true,
-        rsi: { top: 0.50, bottom: 0.27 },   // middle zone ~23%
-        macd: { top: 0.77, bottom: 0 },      // bottom zone ~23%
+        rsi: { top: 0.5, bottom: 0.27 }, // middle zone ~23%
+        macd: { top: 0.77, bottom: 0 }, // bottom zone ~23%
       };
     }
     if (hasRsi) {
@@ -164,7 +179,9 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
     if (data.sma?.lineData?.length) {
       const key = 'sma';
       wantedKeys.add(key);
-      let series = indicatorSeriesRef.current.get(key) as ISeriesApi<'Line'> | undefined;
+      let series = indicatorSeriesRef.current.get(key) as
+        | ISeriesApi<'Line'>
+        | undefined;
       if (!series) {
         series = chart.addSeries(LineSeries, {
           color: INDICATOR_COLORS.sma,
@@ -181,7 +198,9 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
     if (data.ema?.lineData?.length) {
       const key = 'ema';
       wantedKeys.add(key);
-      let series = indicatorSeriesRef.current.get(key) as ISeriesApi<'Line'> | undefined;
+      let series = indicatorSeriesRef.current.get(key) as
+        | ISeriesApi<'Line'>
+        | undefined;
       if (!series) {
         series = chart.addSeries(LineSeries, {
           color: INDICATOR_COLORS.ema,
@@ -196,7 +215,11 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
 
     // Bollinger Bands
     const bb = data.bollinger as
-      | { upper?: { time: number; value: number }[]; middle?: { time: number; value: number }[]; lower?: { time: number; value: number }[] }
+      | {
+          upper?: { time: number; value: number }[];
+          middle?: { time: number; value: number }[];
+          lower?: { time: number; value: number }[];
+        }
       | undefined;
     if (bb) {
       ['middle', 'upper', 'lower'].forEach(band => {
@@ -204,7 +227,9 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
         if (bandData?.length) {
           const key = `bb_${band}`;
           wantedKeys.add(key);
-          let series = indicatorSeriesRef.current.get(key) as ISeriesApi<'Line'> | undefined;
+          let series = indicatorSeriesRef.current.get(key) as
+            | ISeriesApi<'Line'>
+            | undefined;
           if (!series) {
             series = chart.addSeries(LineSeries, {
               color: INDICATOR_COLORS.bollinger,
@@ -224,7 +249,9 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
     if (data.rsi?.lineData?.length) {
       const key = 'rsi';
       wantedKeys.add(key);
-      let series = indicatorSeriesRef.current.get(key) as ISeriesApi<'Line'> | undefined;
+      let series = indicatorSeriesRef.current.get(key) as
+        | ISeriesApi<'Line'>
+        | undefined;
       if (!series) {
         series = chart.addSeries(LineSeries, {
           color: INDICATOR_COLORS.rsi,
@@ -246,13 +273,19 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
 
     // MACD (separate price scale, bottom zone when RSI is also active)
     const macdResult = data.macd as
-      | { macdLine?: { time: number; value: number }[]; signalLine?: { time: number; value: number }[]; histogram?: { time: number; value: number; color?: string }[] }
+      | {
+          macdLine?: { time: number; value: number }[];
+          signalLine?: { time: number; value: number }[];
+          histogram?: { time: number; value: number; color?: string }[];
+        }
       | undefined;
     if (macdResult) {
       if (macdResult.macdLine?.length) {
         const key = 'macd_line';
         wantedKeys.add(key);
-        let series = indicatorSeriesRef.current.get(key) as ISeriesApi<'Line'> | undefined;
+        let series = indicatorSeriesRef.current.get(key) as
+          | ISeriesApi<'Line'>
+          | undefined;
         if (!series) {
           series = chart.addSeries(LineSeries, {
             color: INDICATOR_COLORS.macd,
@@ -274,7 +307,9 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
       if (macdResult.signalLine?.length) {
         const key = 'macd_signal';
         wantedKeys.add(key);
-        let series = indicatorSeriesRef.current.get(key) as ISeriesApi<'Line'> | undefined;
+        let series = indicatorSeriesRef.current.get(key) as
+          | ISeriesApi<'Line'>
+          | undefined;
         if (!series) {
           series = chart.addSeries(LineSeries, {
             color: '#f59e0b',
@@ -291,7 +326,9 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
       if (macdResult.histogram?.length) {
         const key = 'macd_histogram';
         wantedKeys.add(key);
-        let series = indicatorSeriesRef.current.get(key) as ISeriesApi<'Histogram'> | undefined;
+        let series = indicatorSeriesRef.current.get(key) as
+          | ISeriesApi<'Histogram'>
+          | undefined;
         if (!series) {
           series = chart.addSeries(HistogramSeries, {
             priceFormat: { type: 'volume' },
@@ -313,32 +350,32 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
     });
   }, [activeIndicators, indicatorMargins]);
 
-  const setMainSeriesData = useCallback((
-    series: MainSeriesApi,
-    candles: Candle[],
-  ) => {
-    if (chartType === 'candlestick') {
-      (series as ISeriesApi<'Candlestick'>).setData(
-        candles.map(c => ({
-          time: (c.timestamp / 1000) as Time,
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-        })),
-      );
-    } else {
-      const lineData: LineData[] = candles.map(c => ({
-        time: (c.timestamp / 1000) as Time,
-        value: c.close,
-      }));
-      if (chartType === 'area') {
-        (series as ISeriesApi<'Area'>).setData(lineData);
+  const setMainSeriesData = useCallback(
+    (series: MainSeriesApi, candles: Candle[]) => {
+      if (chartType === 'candlestick') {
+        (series as ISeriesApi<'Candlestick'>).setData(
+          candles.map(c => ({
+            time: (c.timestamp / 1000) as Time,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+          })),
+        );
       } else {
-        (series as ISeriesApi<'Line'>).setData(lineData);
+        const lineData: LineData[] = candles.map(c => ({
+          time: (c.timestamp / 1000) as Time,
+          value: c.close,
+        }));
+        if (chartType === 'area') {
+          (series as ISeriesApi<'Area'>).setData(lineData);
+        } else {
+          (series as ISeriesApi<'Line'>).setData(lineData);
+        }
       }
-    }
-  }, [chartType]);
+    },
+    [chartType],
+  );
 
   const fetchCandles = useCallback(
     async (symbol: string, iv: Interval, limit?: number) => {
@@ -358,9 +395,10 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
           const volumeData: HistogramData[] = data.candles.map((c: Candle) => ({
             time: (c.timestamp / 1000) as Time,
             value: c.volume,
-            color: c.close >= c.open
-              ? getCssVar('lc-volume-up', 'rgba(34,197,94,0.3)')
-              : getCssVar('lc-volume-down', 'rgba(239,68,68,0.3)'),
+            color:
+              c.close >= c.open
+                ? getCssVar('lc-volume-up', 'rgba(34,197,94,0.3)')
+                : getCssVar('lc-volume-down', 'rgba(239,68,68,0.3)'),
           }));
           if (volumeSeriesRef.current) {
             volumeSeriesRef.current.setData(volumeData);
@@ -529,7 +567,10 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
     if (!compareAsset || compareAsset === selectedAsset) return;
 
     let cancelled = false;
-    fetch(`/api/market/candles?symbol=${compareAsset}&interval=${interval}&limit=${candleLimit}`, { cache: 'no-store' })
+    fetch(
+      `/api/market/candles?symbol=${compareAsset}&interval=${interval}&limit=${candleLimit}`,
+      { cache: 'no-store' },
+    )
       .then(r => r.json())
       .then(data => {
         if (cancelled || !chart || !data.candles) return;
@@ -551,9 +592,13 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
         series.setData(lineData);
         compareSeriesRef.current = series;
       })
-      .catch((err) => { console.warn('Failed to fetch compare asset candles:', err); });
+      .catch(err => {
+        console.warn('Failed to fetch compare asset candles:', err);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [compareAsset, selectedAsset, interval, candleLimit]);
 
   // Update chart colors on theme change
@@ -568,8 +613,18 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
         horzLines: { color: t.gridColor },
       },
       crosshair: {
-        vertLine: { color: t.crosshairColor, width: 1, style: LineStyle.Dashed, labelBackgroundColor: t.crosshairColor },
-        horzLine: { color: t.crosshairColor, width: 1, style: LineStyle.Dashed, labelBackgroundColor: t.crosshairColor },
+        vertLine: {
+          color: t.crosshairColor,
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: t.crosshairColor,
+        },
+        horzLine: {
+          color: t.crosshairColor,
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: t.crosshairColor,
+        },
       },
       timeScale: { borderColor: t.borderColor },
       rightPriceScale: { borderColor: t.borderColor },
@@ -601,7 +656,6 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
   // Fetch candles on asset, interval, or candle limit change
   useEffect(() => {
     if (selectedAsset) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchCandles(selectedAsset, interval, candleLimit);
     }
   }, [selectedAsset, interval, candleLimit, fetchCandles]);
@@ -629,7 +683,11 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
       .then(r => r.json())
       .then(data => {
         if (cancelled || !series) return;
-        const positions = data.positions as Array<{ assetSymbol: string; liquidationPrice: number; side: string }>;
+        const positions = data.positions as Array<{
+          assetSymbol: string;
+          liquidationPrice: number;
+          side: string;
+        }>;
         const pos = positions.find(p => p.assetSymbol === selectedAsset);
         if (pos && pos.liquidationPrice > 0) {
           liqPriceLineRef.current = series.createPriceLine({
@@ -642,9 +700,13 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
           });
         }
       })
-      .catch((err) => { console.warn('Failed to fetch positions for liquidation line:', err); });
+      .catch(err => {
+        console.warn('Failed to fetch positions for liquidation line:', err);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedAsset]);
 
   const isDesktop = !simplified;
@@ -661,7 +723,7 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
         loading={loading}
         isDesktop={isDesktop}
         candleLimit={candleLimit}
-        onIntervalChange={(iv) => {
+        onIntervalChange={iv => {
           setInterval(iv as Interval);
           setCandleLimit(getDefaultCandleLimit(iv));
         }}
@@ -669,7 +731,7 @@ export const TradingChart = memo(function TradingChart({ simplified = false }: T
         onCompareAssetChange={setCompareAsset}
         onIndicatorToggle={toggleIndicator}
         onRemoveCompare={() => setCompareAsset('')}
-        onCandleLimitChange={(limit) => setCandleLimit(limit)}
+        onCandleLimitChange={limit => setCandleLimit(limit)}
       />
 
       {/* Chart */}

@@ -88,8 +88,16 @@ export const OrderEntry = memo(function OrderEntry() {
       onToggleHelp: () => form.setShowShortcutsHelp(v => !v),
       onToggleCommandPalette: () => form.setShowCommandPalette(v => !v),
     }),
-    [submission.quickMarketSubmit, submission.handleSubmit, submission.setShowConfirm, submission.setResult,
-     form.setLeverage, form.setShowShortcutsHelp, form.setShowCommandPalette],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      submission.quickMarketSubmit,
+      submission.handleSubmit,
+      submission.setShowConfirm,
+      submission.setResult,
+      form.setLeverage,
+      form.setShowShortcutsHelp,
+      form.setShowCommandPalette,
+    ],
   );
 
   useKeyboardShortcuts(shortcutHandlers, true);
@@ -103,6 +111,7 @@ export const OrderEntry = memo(function OrderEntry() {
     } catch (err) {
       console.warn('Failed to refresh positions:', err);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.setOpenPositions]);
 
   // Determine if submit should be disabled
@@ -128,18 +137,24 @@ export const OrderEntry = memo(function OrderEntry() {
           tradingMode={form.tradingMode}
           positionSide={form.positionSide}
           leverage={form.leverage}
-          onMarketTypeChange={(v) => { form.setMarketType(v); form.setPostOnly(false); }}
-          onTradingModeChange={(v) => { form.setTradingMode(v); form.setPostOnly(false); }}
-          onOrderTypeChange={(v) => { form.setOrderType(v as OrderType); form.setPostOnly(false); }}
+          onMarketTypeChange={v => {
+            form.setMarketType(v);
+            form.setPostOnly(false);
+          }}
+          onTradingModeChange={v => {
+            form.setTradingMode(v);
+            form.setPostOnly(false);
+          }}
+          onOrderTypeChange={v => {
+            form.setOrderType(v as OrderType);
+            form.setPostOnly(false);
+          }}
           onPositionSideChange={form.setPositionSide}
           onLeverageChange={form.setLeverage}
         />
 
         {/* Buy/Sell Buttons */}
-        <SideSelector
-          side={form.side}
-          onSideChange={form.setSide}
-        />
+        <SideSelector side={form.side} onSideChange={form.setSide} />
 
         {/* Order Form Inputs */}
         <OrderFormInputs

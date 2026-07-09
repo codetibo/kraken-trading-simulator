@@ -33,8 +33,8 @@ export function useTradeFormState() {
   const [leverage, setLeverage] = useState(saved.leverage);
 
   // --- Trading mode (Market / Limit / Advanced) ---
-  const [tradingMode, setTradingModeState] = useState<TradingMode>(
-    () => tradingModeForOrderType(saved.orderType as OrderType),
+  const [tradingMode, setTradingModeState] = useState<TradingMode>(() =>
+    tradingModeForOrderType(saved.orderType as OrderType),
   );
 
   // Persist the user's last advanced order type so it isn't lost when
@@ -50,22 +50,25 @@ export function useTradeFormState() {
   // Track the last selected advanced order type for mode-switch restoration.
   useEffect(() => {
     if (orderType !== 'MARKET' && orderType !== 'LIMIT') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLastAdvancedType(orderType);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderType]);
 
   // Wrapper: when user switches mode, also update the order type.
   // For Advanced mode, restore the last-selected advanced type instead
   // of always defaulting to STOP_LOSS.
-  const setTradingMode = useCallback((mode: TradingMode) => {
-    setTradingModeState(mode);
-    if (mode === 'ADVANCED') {
-      setOrderType(lastAdvancedType);
-    } else {
-      setOrderType(defaultOrderTypeForMode(mode));
-    }
-  }, [lastAdvancedType]);
+  const setTradingMode = useCallback(
+    (mode: TradingMode) => {
+      setTradingModeState(mode);
+      if (mode === 'ADVANCED') {
+        setOrderType(lastAdvancedType);
+      } else {
+        setOrderType(defaultOrderTypeForMode(mode));
+      }
+    },
+    [lastAdvancedType],
+  );
 
   // --- Transient form state (reset per order) ---
   const [quantity, setQuantity] = useState('');
@@ -85,27 +88,46 @@ export function useTradeFormState() {
   // --- Conditional order fields (stop loss / take profit / trailing stop attached to a main order) ---
   const [conditionalStopLoss, setConditionalStopLoss] = useState('');
   const [conditionalTakeProfit, setConditionalTakeProfit] = useState('');
-  const [conditionalTrailingStopEnabled, setConditionalTrailingStopEnabled] = useState(false);
-  const [conditionalTrailingOffsetType, setConditionalTrailingOffsetType] = useState<
-    'PERCENT' | 'FIXED'
-  >('PERCENT');
-  const [conditionalTrailingOffsetValue, setConditionalTrailingOffsetValue] = useState('');
-  const [conditionalTrailingLimitOffset, setConditionalTrailingLimitOffset] = useState('');
+  const [conditionalTrailingStopEnabled, setConditionalTrailingStopEnabled] =
+    useState(false);
+  const [conditionalTrailingOffsetType, setConditionalTrailingOffsetType] =
+    useState<'PERCENT' | 'FIXED'>('PERCENT');
+  const [conditionalTrailingOffsetValue, setConditionalTrailingOffsetValue] =
+    useState('');
+  const [conditionalTrailingLimitOffset, setConditionalTrailingLimitOffset] =
+    useState('');
 
   // --- TP/SL mode: 'PRICE' | 'SIMPLE' | 'ADVANCED' ---
-  const [tpSlMode, setTpSlMode] = useState<'PRICE' | 'SIMPLE' | 'ADVANCED'>('PRICE');
+  const [tpSlMode, setTpSlMode] = useState<'PRICE' | 'SIMPLE' | 'ADVANCED'>(
+    'PRICE',
+  );
 
   // --- Simple TP/SL mode trigger types and values ---
-  const [simpleTpType, setSimpleTpType] = useState<'PERCENT' | 'PNL_USD' | 'PRICE'>('PRICE');
+  const [simpleTpType, setSimpleTpType] = useState<
+    'PERCENT' | 'PNL_USD' | 'PRICE'
+  >('PRICE');
   const [simpleTpValue, setSimpleTpValue] = useState('');
-  const [simpleSlType, setSimpleSlType] = useState<'PERCENT' | 'PNL_USD' | 'PRICE'>('PRICE');
+  const [simpleSlType, setSimpleSlType] = useState<
+    'PERCENT' | 'PNL_USD' | 'PRICE'
+  >('PRICE');
   const [simpleSlValue, setSimpleSlValue] = useState('');
 
   // --- Advanced TP/SL mode state ---
-  const [advField1, setAdvField1] = useState<'PROFIT_TAKING' | 'PROFIT_TAKING_LIMIT' | 'LIMIT'>('PROFIT_TAKING');
-  const [advField2Type, setAdvField2Type] = useState<'DISTANCE' | 'PNL'>('DISTANCE');
+  const [advField1, setAdvField1] = useState<
+    'PROFIT_TAKING' | 'PROFIT_TAKING_LIMIT' | 'LIMIT'
+  >('PROFIT_TAKING');
+  const [advField2Type, setAdvField2Type] = useState<'DISTANCE' | 'PNL'>(
+    'DISTANCE',
+  );
   const [advField2Value, setAdvField2Value] = useState('');
-  const [advField3, setAdvField3] = useState<'STOP_LOSS_DISTANCE' | 'STOP_LOSS_PNL' | 'STOP_LOSS_LIMIT_DISTANCE' | 'STOP_LOSS_LIMIT_PNL' | 'TRAILING_STOP' | 'TRAILING_STOP_LIMIT'>('STOP_LOSS_DISTANCE');
+  const [advField3, setAdvField3] = useState<
+    | 'STOP_LOSS_DISTANCE'
+    | 'STOP_LOSS_PNL'
+    | 'STOP_LOSS_LIMIT_DISTANCE'
+    | 'STOP_LOSS_LIMIT_PNL'
+    | 'TRAILING_STOP'
+    | 'TRAILING_STOP_LIMIT'
+  >('STOP_LOSS_DISTANCE');
   const [advField3Value, setAdvField3Value] = useState('');
   const [advField3Extra, setAdvField3Extra] = useState('');
 
@@ -129,8 +151,8 @@ export function useTradeFormState() {
   // Sync trading mode when orderType changes externally (e.g. asset switch)
   // Exclude setTradingModeState from deps — it's a stable setter from useState.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTradingModeState(tradingModeForOrderType(orderType));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderType]);
 
   // Reload persisted settings when asset changes
